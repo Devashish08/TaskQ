@@ -1,0 +1,41 @@
+# .golangci.yml (Corrected for older golangci-lint version)
+version: "2"
+run:
+  # timeout for analysis, e.g. 30s, 5m, default is 1m
+  timeout: 5m
+  # list of build tags, default is empty list
+  # build-tags:
+  #  - integration
+
+linters:
+  # We will rely on the default enabled linters for this version.
+  # You can explicitly enable them if you want, but it's often redundant if they are default.
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+  # If you wanted to enable a linter that is disabled by default, add it here.
+  # For example:
+  #  - goconst
+  #  - gocritic
+
+  # We don't need to disable the defaults.
+  # disable:
+  #   - some-linter
+
+issues:
+  # Maximum issues count per one linter. Set to 0 for unlimited. Default is 50.
+  max-issues-per-linter: 0
+  # Maximum count of issues with the same text. Set to 0 for unlimited. Default is 3.
+  max-same-issues: 0
+
+# Optional: Output formatting
+# output:
+#   format: colored-line-number
+
+# Optional: Linter specific settings
+# linters-settings:
+#   govet:
+#     check-shadowing: true # Example setting
