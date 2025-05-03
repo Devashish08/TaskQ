@@ -30,14 +30,14 @@ func (h *ApiHandler) SubmitJobHandler(c *gin.Context) {
 		return
 	}
 
-	err := h.JobSvc.SubmitJob(req.Type, req.Payload)
+	submittedJob, err := h.JobSvc.SubmitJob(req.Type, req.Payload)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message":  "Job submitted to service successfully",
-		"job_type": req.Type,
+	c.JSON(http.StatusAccepted, gin.H{
+		"message":  "Job submitted for processing",
+		"job_type": submittedJob.ID,
 	})
 }
