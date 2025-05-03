@@ -37,7 +37,7 @@ func (h *ApiHandler) SubmitJobHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusAccepted, gin.H{
-		"message":  "Job submitted for processing",
+		"message":  "Job accepted  for processing",
 		"job_type": submittedJob.ID,
 	})
 }

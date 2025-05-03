@@ -5,6 +5,8 @@ import (
 	"log"
 
 	"github.com/Devashish08/taskq/internal/api"
+	"github.com/Devashish08/taskq/internal/config"
+	"github.com/Devashish08/taskq/internal/database"
 	"github.com/Devashish08/taskq/internal/service"
 	"github.com/Devashish08/taskq/internal/worker"
 )
@@ -12,9 +14,25 @@ import (
 func main() {
 	fmt.Println("Starting TaskQ server...")
 
+	dbCfg, err := config.LoadDBConfig()
+	if err != nil {
+		log.Fatalf("Failed to load database config: %v", err)
+	}
+
+	dbPool, err := database.ConnectDB(dbCfg)
+	if err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
+	}
+	defer func() {
+		log.Println("Closing database connection pool...")
+		if cerr := dbPool.Close(); cerr != nil {
+			log.Printf("Error closing database connection: %v\n", cerr)
+		}
+	}()
+
 	// --- Initialize Dependencies ---
 	// TODO: Initialize config loading
-	jobService := service.NewJobService()
+	jobService := service.NewJobService(dbPool)
 	apiHandler := api.NewApiHandler(jobService)
 
 	// --- Start Worker(s) ---

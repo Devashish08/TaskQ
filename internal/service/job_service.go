@@ -1,6 +1,7 @@
 package service
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 
@@ -13,13 +14,15 @@ const (
 
 type JobService struct {
 	jobQueue chan models.Job
+	db       *sql.DB
 }
 
-func NewJobService() *JobService {
+func NewJobService(db *sql.DB) *JobService {
 	jobQueue := make(chan models.Job, jobQueueBufferSize)
 
 	return &JobService{
 		jobQueue: jobQueue,
+		db:       db,
 	}
 }
 
@@ -30,8 +33,25 @@ func (s *JobService) SubmitJob(jobType string, payload map[string]interface{}) (
 		return nil, fmt.Errorf("failed to create job structure: %w", err)
 	}
 
+	insertSQL := `
+        INSERT INTO jobs (id, type, payload, status, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6)`
+	_, err = s.db.Exec(insertSQL,
+		job.ID,
+		job.Type,
+		job.Payload,
+		job.Status,
+		job.CreatedAt,
+		job.UpdatedAt,
+	)
+	if err != nil {
+		log.Printf("Error inserting job %s into database: %v\n", job.ID, err)
+		return nil, fmt.Errorf("database insert failed: %w", err)
+	}
+	log.Printf("JobService: Inserted job %s into database\n", job.ID)
+
 	s.jobQueue <- *job
-	fmt.Printf("JobService: Enqueued job %s of type %s\n", job.ID, job.Type)
+	fmt.Printf("JobService: Enqueued job %s (type: %s) to in-memory channel\n", job.ID, job.Type)
 
 	return job, nil
 }
