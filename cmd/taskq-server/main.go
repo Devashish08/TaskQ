@@ -5,18 +5,27 @@ import (
 	"log"
 
 	"github.com/Devashish08/taskq/internal/api"
+	"github.com/Devashish08/taskq/internal/service"
+	"github.com/Devashish08/taskq/internal/worker"
 )
 
 func main() {
 	fmt.Println("Starting TaskQ server...")
 
-	router := api.SetupRouter()
+	// --- Initialize Dependencies ---
 	// TODO: Initialize config loading
-	// TODO: initialize workers
+	jobService := service.NewJobService()
+	apiHandler := api.NewApiHandler(jobService)
 
-	// start the server
+	// --- Start Worker(s) ---
+	// Get the job queue channel from the service
+	jobQueueChannel := jobService.GetJobQueue()
 
-	// TODO: mark the port configurable later
+	// --- Setup and Start API Server ---
+	workerInstance := worker.NewWorker(1, jobQueueChannel)
+	workerInstance.Start()
+
+	router := api.SetupRouterWithDeps(apiHandler)
 
 	part := "8080"
 	fmt.Printf("Server listening on port %s\n", part)

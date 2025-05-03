@@ -28,7 +28,7 @@ TaskQ is a backend service designed to accept tasks via an API, queue them relia
     *   Create a `POST /jobs` endpoint.
     *   For now, this endpoint just reads the request body (expecting simple JSON like `{"type": "email", "payload": {"to": "test@example.com"}}`) and prints it to the console.
     *   *Commit Message:* `feat: Implement basic HTTP server with POST /jobs endpoint`
-*   [ ] **Step 1.3: Job Definition & In-Memory Queue**
+*   [✅] **Step 1.3: Job Definition & In-Memory Queue**
     *   Define a Go `struct` representing a Job (e.g., `ID`, `Type`, `Payload`, `Status`).
     *   Create a simple buffered Go channel (`chan Job`) to act as the in-memory queue.
     *   Modify the `POST /jobs` handler to unmarshal the JSON into the `Job` struct and send it to the channel.
