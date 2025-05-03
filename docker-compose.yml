@@ -1,0 +1,17 @@
+version: "3.9"
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: taskq-db
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: taskq_user 
+      POSTGRES_PASSWORD: taskq_password
+      POSTGRES_DB: taskq_db
+    volumes:
+      - taskq_data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d/
+volumes:
+  taskq_data:
