@@ -14,6 +14,33 @@ type DBConfig struct {
 	DBName   string
 }
 
+type RedisConfig struct {
+	Addr     string
+	Password string
+	DB       int
+}
+
+type AppConfig struct {
+	Database *DBConfig
+	Redis    *RedisConfig
+}
+
+func LoadConfig() (*AppConfig, error) {
+	dbcfg, err := LoadDBConfig()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load database config: %w", err)
+	}
+
+	rediscfg, err := loadRedisConfig()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load redis config: %w", err)
+	}
+
+	return &AppConfig{
+		Database: dbcfg,
+		Redis:    rediscfg,
+	}, nil
+}
 func LoadDBConfig() (*DBConfig, error) {
 	portStr := getEnv("DB_PORT", "5432")
 	port, err := strconv.Atoi(portStr)
@@ -31,6 +58,22 @@ func LoadDBConfig() (*DBConfig, error) {
 	if cfg.User == "" || cfg.Password == "" || cfg.DBName == "" {
 		return nil, fmt.Errorf("DB_USER, DB_PASSWORD, and DB_NAME environment variables must be set")
 	}
+	return cfg, nil
+}
+
+func loadRedisConfig() (*RedisConfig, error) {
+	redisDBStr := getEnv("REDIS_DB", "0")
+	redisDB, err := strconv.Atoi(redisDBStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid REDIS_DB value: %w", err)
+	}
+
+	cfg := &RedisConfig{
+		Addr:     getEnv("REDIS_ADDR", "localhost:6379"),
+		Password: getEnv("REDIS_PASSWORD", ""),
+		DB:       redisDB,
+	}
+
 	return cfg, nil
 }
 

@@ -33,7 +33,7 @@ TaskQ is a backend service designed to accept tasks via an API, queue them relia
     *   Create a simple buffered Go channel (`chan Job`) to act as the in-memory queue.
     *   Modify the `POST /jobs` handler to unmarshal the JSON into the `Job` struct and send it to the channel.
     *   *Commit Message:* `feat: Define Job struct and implement in-memory queue using channel`
-*   [ ] **Step 1.4: Single Basic Worker**
+*   [✅] **Step 1.4: Single Basic Worker**
     *   Create a function that runs in a separate goroutine.
     *   This function loops indefinitely, reading `Job` structs from the channel.
     *   For now, the worker just prints the received job details (`fmt.Printf("Processing job: %+v\n", job)`).
@@ -49,18 +49,18 @@ TaskQ is a backend service designed to accept tasks via an API, queue them relia
 
 **Goal:** Replace the in-memory queue with Redis and persist job details and status in PostgreSQL.
 
-*   [ ] **Step 2.1: Database Setup (PostgreSQL)**
+*   [✅] **Step 2.1: Database Setup (PostgreSQL)**
     *   Create a `docker-compose.yml` file to run PostgreSQL.
     *   Define the SQL schema for a `jobs` table (e.g., `id UUID PRIMARY KEY`, `type VARCHAR(255)`, `payload JSONB`, `status VARCHAR(50)`, `created_at TIMESTAMPTZ`, `updated_at TIMESTAMPTZ`). Create an SQL migration file.
     *   *Commit Message:* `chore: Add PostgreSQL container and define jobs table schema`
-*   [ ] **Step 2.2: Database Integration**
+*   [✅] **Step 2.2: Database Integration**
     *   Add a database connection package (`internal/database`) using `database/sql` and a driver like `pgx`.
     *   Load DB connection details from configuration (env vars or config file).
     *   Modify `POST /jobs` handler:
         *   Generate a unique Job ID (e.g., UUID).
         *   Insert the new job into the `jobs` table with `status = 'pending'`.
     *   *Commit Message:* `feat: Integrate PostgreSQL, persist jobs on submission`
-*   [ ] **Step 2.3: Redis Setup**
+*   [] **Step 2.3: Redis Setup**
     *   Add Redis to the `docker-compose.yml`.
     *   Add a Redis client library (e.g., `go-redis/redis`).
     *   Connect to Redis, loading details from configuration.
