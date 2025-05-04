@@ -49,7 +49,7 @@ func main() {
 	apiHandler := api.NewApiHandler(jobService)
 
 	// --- Setup and Start API Server ---
-	workerInstance := worker.NewWorker(1, redisClient)
+	workerInstance := worker.NewWorker(1, redisClient, dbPool)
 	workerInstance.Start()
 
 	router := api.SetupRouterWithDeps(apiHandler)

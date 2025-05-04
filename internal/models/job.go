@@ -23,6 +23,7 @@ type Job struct {
 	Status    JobStatus       `json:"status"`
 	CreatedAt time.Time       `json:"created_at"`
 	UpdatedAt time.Time       `json:"updated_at"`
+	Attempts  int             `json:"attempts"`
 }
 
 func NewJob(jobType string, payload map[string]interface{}) (*Job, error) {
@@ -42,5 +43,6 @@ func NewJob(jobType string, payload map[string]interface{}) (*Job, error) {
 		Status:    StatusPending,
 		CreatedAt: now,
 		UpdatedAt: now,
+		Attempts:  0,
 	}, nil
 }
