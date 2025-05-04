@@ -1,28 +1,29 @@
 package service
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
 
 	"github.com/Devashish08/taskq/internal/models"
+	"github.com/redis/go-redis/v9"
 )
 
 const (
+	PendingQueueKey    = `taskq:pending_jobs`
 	jobQueueBufferSize = 100
 )
 
 type JobService struct {
-	jobQueue chan models.Job
-	db       *sql.DB
+	redisClient *redis.Client
+	db          *sql.DB
 }
 
-func NewJobService(db *sql.DB) *JobService {
-	jobQueue := make(chan models.Job, jobQueueBufferSize)
-
+func NewJobService(db *sql.DB, redisClient *redis.Client) *JobService {
 	return &JobService{
-		jobQueue: jobQueue,
-		db:       db,
+		redisClient: redisClient,
+		db:          db,
 	}
 }
 
@@ -50,12 +51,16 @@ func (s *JobService) SubmitJob(jobType string, payload map[string]interface{}) (
 	}
 	log.Printf("JobService: Inserted job %s into database\n", job.ID)
 
-	s.jobQueue <- *job
-	fmt.Printf("JobService: Enqueued job %s (type: %s) to in-memory channel\n", job.ID, job.Type)
+	ctx := context.Background()
+	jobIDStr := job.ID.String()
+
+	err = s.redisClient.LPush(ctx, PendingQueueKey, jobIDStr).Err()
+	if err != nil {
+		log.Printf("CRITICAL: Failed to push job %s to Redis queue after DB insert: %v\n", jobIDStr, err)
+		return job, fmt.Errorf("failed to enqueue job after saving: %w", err)
+	}
+
+	log.Printf("JobService: Enqueued job %s to Redis list '%s'\n", jobIDStr, PendingQueueKey)
 
 	return job, nil
-}
-
-func (s *JobService) GetJobQueue() <-chan models.Job {
-	return s.jobQueue
 }

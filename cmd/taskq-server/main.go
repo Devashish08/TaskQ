@@ -45,15 +45,11 @@ func main() {
 
 	// --- Initialize Dependencies ---
 	// TODO: Initialize config loading
-	jobService := service.NewJobService(dbPool)
+	jobService := service.NewJobService(dbPool, redisClient)
 	apiHandler := api.NewApiHandler(jobService)
 
-	// --- Start Worker(s) ---
-	// Get the job queue channel from the service
-	jobQueueChannel := jobService.GetJobQueue()
-
 	// --- Setup and Start API Server ---
-	workerInstance := worker.NewWorker(1, jobQueueChannel)
+	workerInstance := worker.NewWorker(1, redisClient)
 	workerInstance.Start()
 
 	router := api.SetupRouterWithDeps(apiHandler)

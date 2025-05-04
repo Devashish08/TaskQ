@@ -60,12 +60,12 @@ TaskQ is a backend service designed to accept tasks via an API, queue them relia
         *   Generate a unique Job ID (e.g., UUID).
         *   Insert the new job into the `jobs` table with `status = 'pending'`.
     *   *Commit Message:* `feat: Integrate PostgreSQL, persist jobs on submission`
-*   [] **Step 2.3: Redis Setup**
+*   [✅] **Step 2.3: Redis Setup**
     *   Add Redis to the `docker-compose.yml`.
     *   Add a Redis client library (e.g., `go-redis/redis`).
     *   Connect to Redis, loading details from configuration.
     *   *Commit Message:* `chore: Add Redis container and client integration`
-*   [ ] **Step 2.4: Redis Queue Implementation**
+*   [✅] **Step 2.4: Redis Queue Implementation**
     *   Modify `POST /jobs` handler: After successfully inserting into PostgreSQL, push the `job_id` onto a Redis list (e.g., `taskq:pending_jobs`) using `LPUSH`.
     *   Modify the worker:
         *   Remove the Go channel logic.
