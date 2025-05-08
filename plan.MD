@@ -71,7 +71,7 @@ TaskQ is a backend service designed to accept tasks via an API, queue them relia
         *   Remove the Go channel logic.
         *   Use Redis `BRPOP` (blocking pop) to wait for and retrieve a `job_id` from the `taskq:pending_jobs` list.
     *   *Commit Message:* `feat: Implement Redis list-based queue using LPUSH/BRPOP`
-*   [ ] **Step 2.5: Worker Database Interaction**
+*   [✅] **Step 2.5: Worker Database Interaction**
     *   When the worker receives a `job_id` from Redis:
         *   Query the PostgreSQL `jobs` table to fetch the full job details (type, payload) using the ID.
         *   Update the job status to `'running'` in the database.
@@ -92,7 +92,7 @@ TaskQ is a backend service designed to accept tasks via an API, queue them relia
 
 **Goal:** Make the system more robust with multiple workers, proper error handling, basic retries, and an API to check job status.
 
-*   [ ] **Step 3.1: Worker Pool**
+*   [🚧] **Step 3.1: Worker Pool**
     *   Refactor the worker logic to allow running multiple worker goroutines concurrently.
     *   Use a `sync.WaitGroup` to manage the lifecycle of worker goroutines.
     *   Configure the number of workers via application settings.
