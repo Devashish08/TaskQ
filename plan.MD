@@ -92,13 +92,13 @@ TaskQ is a backend service designed to accept tasks via an API, queue them relia
 
 **Goal:** Make the system more robust with multiple workers, proper error handling, basic retries, and an API to check job status.
 
-*   [🚧] **Step 3.1: Worker Pool**
+*   [✅🚧] **Step 3.1: Worker Pool**
     *   Refactor the worker logic to allow running multiple worker goroutines concurrently.
     *   Use a `sync.WaitGroup` to manage the lifecycle of worker goroutines.
     *   Configure the number of workers via application settings.
     *   Ensure each worker independently loops on `BRPOP`.
     *   *Commit Message:* `feat: Implement concurrent worker pool`
-*   [ ] **Step 3.2: Job Execution Logic & Error Handling**
+*   [✅] **Step 3.2: Job Execution Logic & Error Handling**
     *   Create a simple job registry or map (`map[string]func(payload json.RawMessage) error`) to associate job `type` strings with actual Go functions.
     *   Implement 1-2 dummy job functions (e.g., `handleEmailJob`, `handleReportJob`). One should sometimes return an error.
     *   In the worker, look up the function based on `job.Type` and execute it.
