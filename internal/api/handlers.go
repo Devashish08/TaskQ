@@ -1,10 +1,14 @@
 package api
 
 import (
+	"database/sql"
+	"errors"
+	"log"
 	"net/http"
 
 	"github.com/Devashish08/taskq/internal/service"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 type submitJobRequest struct {
@@ -37,7 +41,35 @@ func (h *ApiHandler) SubmitJobHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusAccepted, gin.H{
-		"message":  "Job accepted  for processing",
-		"job_type": submittedJob.ID,
+		"message": "Job accepted  for processing",
+		"job_id":  submittedJob.ID,
 	})
+}
+
+func (h *ApiHandler) GetJobStatusHandler(c *gin.Context) {
+	jobIDStr := c.Param("job_id")
+
+	jobID, err := uuid.Parse(jobIDStr)
+
+	if err != nil {
+		log.Printf("Invalid job ID: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid job ID"})
+		return
+	}
+
+	jobDetails, err := h.JobSvc.GetJobStatus(jobID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			log.Printf("API: Job not found for ID: %s\n", jobID)
+			c.JSON(http.StatusNotFound, gin.H{"error": "Job not found"})
+			return
+		}
+		log.Printf("API: Error fetching job status for ID %s: %v\n", jobID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve job status"})
+		return
+	}
+
+	log.Printf("API: Successfully retrieved job status for ID: %s\n", jobID)
+	c.JSON(http.StatusOK, jobDetails)
+
 }

@@ -92,7 +92,7 @@ TaskQ is a backend service designed to accept tasks via an API, queue them relia
 
 **Goal:** Make the system more robust with multiple workers, proper error handling, basic retries, and an API to check job status.
 
-*   [✅🚧] **Step 3.1: Worker Pool**
+*   [✅] **Step 3.1: Worker Pool**
     *   Refactor the worker logic to allow running multiple worker goroutines concurrently.
     *   Use a `sync.WaitGroup` to manage the lifecycle of worker goroutines.
     *   Configure the number of workers via application settings.
@@ -106,7 +106,7 @@ TaskQ is a backend service designed to accept tasks via an API, queue them relia
         *   Update the job status to `'failed'` in the database.
         *   Store the error message in a new `error_message TEXT` column in the `jobs` table.
     *   *Commit Message:* `feat: Implement job execution registry and handle job failures`
-*   [ ] **Step 3.3: Basic Retry Mechanism**
+*   [✅] **Step 3.3: Basic Retry Mechanism**
     *   Add an `attempts INT DEFAULT 0` column to the `jobs` table.
     *   When a job fails:
         *   Increment the `attempts` count in the database.

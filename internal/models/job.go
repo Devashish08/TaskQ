@@ -1,6 +1,7 @@
 package models
 
 import (
+	"database/sql"
 	"encoding/json"
 	"time"
 
@@ -17,13 +18,14 @@ const (
 )
 
 type Job struct {
-	ID        uuid.UUID       `json:"id"`
-	Type      string          `json:"type"`
-	Payload   json.RawMessage `json:"payload"`
-	Status    JobStatus       `json:"status"`
-	CreatedAt time.Time       `json:"created_at"`
-	UpdatedAt time.Time       `json:"updated_at"`
-	Attempts  int             `json:"attempts"`
+	ID           uuid.UUID       `json:"id"`
+	Type         string          `json:"type"`
+	Payload      json.RawMessage `json:"payload"`
+	Status       JobStatus       `json:"status"`
+	CreatedAt    time.Time       `json:"created_at"`
+	UpdatedAt    time.Time       `json:"updated_at"`
+	Attempts     int             `json:"attempts"`
+	ErrorMessage sql.NullString  `json:"error_message,omitempty"`
 }
 
 func NewJob(jobType string, payload map[string]interface{}) (*Job, error) {

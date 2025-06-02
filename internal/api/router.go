@@ -10,6 +10,7 @@ func SetupRouterWithDeps(apiHandler *ApiHandler) *gin.Engine {
 	v1 := router.Group("/api/v1")
 	{
 		v1.POST("/jobs", apiHandler.SubmitJobHandler)
+		v1.GET("/jobs/:job_id", apiHandler.GetJobStatusHandler)
 	}
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "UP"})
