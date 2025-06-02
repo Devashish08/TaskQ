@@ -6,6 +6,10 @@ import (
 	"strconv"
 )
 
+const (
+	DefaultMaxJobAttempts = 3
+)
+
 type DBConfig struct {
 	Host     string
 	Port     int
@@ -20,9 +24,14 @@ type RedisConfig struct {
 	DB       int
 }
 
+type WorkerConfig struct {
+	MaxRetryAttempts int
+}
+
 type AppConfig struct {
 	Database *DBConfig
 	Redis    *RedisConfig
+	Worker   *WorkerConfig
 }
 
 func LoadConfig() (*AppConfig, error) {
@@ -36,11 +45,17 @@ func LoadConfig() (*AppConfig, error) {
 		return nil, fmt.Errorf("failed to load redis config: %w", err)
 	}
 
+	workerCfg, err := loadWorkerConfig()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load worker config: %w", err)
+	}
 	return &AppConfig{
 		Database: dbcfg,
 		Redis:    rediscfg,
+		Worker:   workerCfg,
 	}, nil
 }
+
 func LoadDBConfig() (*DBConfig, error) {
 	portStr := getEnv("DB_PORT", "5432")
 	port, err := strconv.Atoi(portStr)
@@ -75,6 +90,12 @@ func loadRedisConfig() (*RedisConfig, error) {
 	}
 
 	return cfg, nil
+}
+
+func loadWorkerConfig() (*WorkerConfig, error) {
+	return &WorkerConfig{
+		MaxRetryAttempts: DefaultMaxJobAttempts,
+	}, nil
 }
 
 func getEnv(key, fallback string) string {

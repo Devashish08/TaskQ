@@ -22,7 +22,7 @@ run:
 build:
 	@echo "Building TaskQ server binary..."
 	@mkdir -p $(BINARY_DIR)
-	@go build -o $(BINARY_DIR)/$(BINARY_NAME) $(CMD_PATH)/main.go
+	@go build -o $(BINARY_DIR)/$(BINARY_NAME) $(CMD_PATH)
 	@echo "Binary available at $(BINARY_DIR)/$(BINARY_NAME)"
 
 # Target to run tests
