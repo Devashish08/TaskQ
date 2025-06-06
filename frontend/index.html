@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TaskQ Job Submission</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>TaskQ Job Submission</h1>
+
+        <form id="submitJobForm">
+            <div>
+                <label for="jobType">Job Type:</label>
+                <select id="jobType" name="jobType">
+                    <option value="log_payload">Log Payload</option>
+                    <option value="failing_job">Failing Job</option>
+                    <option value="long_job">Long Running Job</option>
+                    <option value="unknown_job_type">Unknown Type (for testing errors)</option>
+                </select>
+            </div>
+            <div>
+                <label for="jobPayload">Payload (JSON):</label>
+                <textarea id="jobPayload" name="jobPayload" rows="5" placeholder='{"message": "hello"}'></textarea>
+            </div>
+            <button type="submit">Submit Job</button>
+        </form>
+
+        <h2>API Response (Submission):</h2>
+        <pre id="submissionApiResponse"></pre>
+
+        <hr>
+
+        <h1>Check Job Status</h1>
+        <form id="getJobStatusForm">
+            <div>
+                <label for="queryJobId">Job ID:</label>
+                <input type="text" id="queryJobId" name="queryJobId" placeholder="Enter Job ID (UUID)">
+            </div>
+            <button type="submit">Get Status</button>
+        </form>
+
+        <h2>API Response (Status):</h2>
+        <pre id="statusApiResponse"></pre>
+
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

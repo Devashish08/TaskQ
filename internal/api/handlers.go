@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/Devashish08/taskq/internal/models"
 	"github.com/Devashish08/taskq/internal/service"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -72,4 +73,23 @@ func (h *ApiHandler) GetJobStatusHandler(c *gin.Context) {
 	log.Printf("API: Successfully retrieved job status for ID: %s\n", jobID)
 	c.JSON(http.StatusOK, jobDetails)
 
+}
+
+func (h *ApiHandler) ListJobsHandler(c *gin.Context) {
+
+	limit := 20
+
+	jobs, err := h.JobSvc.ListRecentJobs(limit)
+	if err != nil {
+		log.Printf("API: Error listing jobs: %v\n", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve jobs"})
+		return
+	}
+
+	if jobs == nil {
+		jobs = []models.Job{}
+	}
+
+	log.Printf("API: Successfully retrieved %d recent jobs\n", len(jobs))
+	c.JSON(http.StatusOK, jobs)
 }

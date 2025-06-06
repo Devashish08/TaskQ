@@ -99,3 +99,49 @@ func (s *JobService) GetJobStatus(jobID uuid.UUID) (*models.Job, error) {
 
 	return &job, nil
 }
+
+func (s *JobService) ListRecentJobs(limit int) ([]models.Job, error) {
+	if limit <= 0 || limit > 100 {
+		limit = 20
+	}
+
+	ctx := context.Background()
+	query := `
+		SELECT id, type, payload, status, created_at, updated_at, attempts, error_message
+		FROM jobs
+		ORDER BY created_at DESC
+		LIMIT $1`
+
+	rows, err := s.db.QueryContext(ctx, query, limit)
+	if err != nil {
+		log.Printf("ERROR listing recent jobs: %v\n", err)
+		return nil, fmt.Errorf("failed to query recent jobs: %w", err)
+	}
+	defer rows.Close()
+
+	var jobs []models.Job
+	for rows.Next() {
+		var job models.Job
+		if err := rows.Scan(
+			&job.ID,
+			&job.Type,
+			&job.Payload,
+			&job.Status,
+			&job.CreatedAt,
+			&job.UpdatedAt,
+			&job.Attempts,
+			&job.ErrorMessage,
+		); err != nil {
+			log.Printf("ERROR scanning job row while listing recent jobs: %v\n", err)
+			return jobs, fmt.Errorf("failed to scan job row: %w", err)
+		}
+		jobs = append(jobs, job)
+	}
+
+	if err = rows.Err(); err != nil {
+		log.Printf("ERROR after iterating over job rows: %v\n", err)
+		return jobs, fmt.Errorf("error iterating job rows: %w", err)
+	}
+
+	return jobs, nil
+}
