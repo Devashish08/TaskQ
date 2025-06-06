@@ -1,8 +1,34 @@
-version: "3.9" # Or remove if desired
+version: "3.9"
+
 services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: taskq-app-service
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: taskq_user
+      DB_PASSWORD: taskq_password
+      DB_NAME: taskq_db
+      REDIS_ADDR: redis:6379
+      REDIS_DB: 0
+      # GIN_MODE: release # Uncomment to run Gin in release mode inside the container
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - taskq_internal_network
+
   db:
     image: postgres:15-alpine
-    container_name: taskq-db
+    container_name: taskq-db-service
     restart: always
     ports:
       - "5432:5432"
@@ -10,19 +36,33 @@ services:
       POSTGRES_USER: taskq_user
       POSTGRES_PASSWORD: taskq_password
       POSTGRES_DB: taskq_db
-      POSTGRES_HOST_AUTH_METHOD: scram-sha-256 
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
     volumes:
-      - taskq_data:/var/lib/postgresql/data
+      - taskq_db_data:/var/lib/postgresql/data
       - ./migrations:/docker-entrypoint-initdb.d/
+    networks:
+      - taskq_internal_network
+    healthcheck:
+        test: ["CMD-SHELL", "pg_isready -U taskq_user -d taskq_db"]
+        interval: 5s
+        timeout: 5s
+        retries: 5
+
   redis:
     image: redis:7-alpine
-    container_name: taskq-redis
+    container_name: taskq-redis-service
     restart: always
     ports:
       - "6379:6379"
     volumes:
       - taskq_redis_data:/data
+    networks:
+      - taskq_internal_network
 
 volumes:
-  taskq_data:
+  taskq_db_data:
   taskq_redis_data:
+
+networks:
+  taskq_internal_network:
+    driver: bridge

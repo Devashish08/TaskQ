@@ -1,0 +1,19 @@
+# .dockerignore
+.git
+.gitignore
+.gitattributes
+
+Dockerfile
+.dockerignore
+docker-compose.yml 
+
+*.exe
+*.test
+*.out
+vendor/
+bin/ 
+frontend/ # Exclude the frontend directory from the backend's build context
+
+.idea/
+.vscode/
+*.DS_Store
