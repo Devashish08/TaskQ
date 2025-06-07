@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const statusApiResponsePre = document.getElementById('statusApiResponse');
 
     // Base URL for the API
-    const API_BASE_URL = 'https://taskq-jct8.onrender.com';
+    const API_BASE_URL = 'https://taskq-jct8.onrender.com/api/v1';
 
     // Handle Job Submission
     if (submitJobForm) {

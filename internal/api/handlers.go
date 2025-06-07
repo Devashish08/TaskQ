@@ -28,6 +28,7 @@ func NewApiHandler(jobService *service.JobService) *ApiHandler {
 }
 
 func (h *ApiHandler) SubmitJobHandler(c *gin.Context) {
+	log.Println("--- NEW SUBMIT JOB REQUEST ---")
 	var req submitJobRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -37,12 +38,13 @@ func (h *ApiHandler) SubmitJobHandler(c *gin.Context) {
 
 	submittedJob, err := h.JobSvc.SubmitJob(req.Type, req.Payload)
 	if err != nil {
+		log.Printf("API: Error from JobService on submission: %v\n", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	c.JSON(http.StatusAccepted, gin.H{
-		"message": "Job accepted  for processing",
+		"message": "Job accepted for processing",
 		"job_id":  submittedJob.ID,
 	})
 }
