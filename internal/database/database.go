@@ -34,3 +34,13 @@ func ConnectDB(cfg *config.DBConfig) (*sql.DB, error) {
 	log.Println("Database connection established")
 	return db, nil
 }
+
+func MigrateDB(db *sql.DB) error {
+	log.Println("Running database migration (CREATE TABLE IF NOT EXISTS)...")
+	_, err := db.Exec(createJobsTableSQL)
+	if err != nil {
+		return fmt.Errorf("failed to run migration: %w", err)
+	}
+	log.Println("Database migration check completed successfully.")
+	return nil
+}

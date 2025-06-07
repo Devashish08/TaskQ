@@ -1,3 +1,7 @@
+// Package main implements the TaskQ server application.
+// TaskQ is a distributed task queue system that provides job scheduling,
+// execution, and management capabilities using Redis as a message broker
+// and PostgreSQL for persistence.
 package main
 
 import (
@@ -18,6 +22,23 @@ import (
 	"github.com/Devashish08/taskq/internal/worker"
 )
 
+// main is the entry point for the TaskQ server application.
+// It initializes all required components including database connections,
+// Redis client, job handlers, worker pool, and HTTP server.
+// The function implements graceful shutdown handling for SIGINT and SIGTERM signals.
+//
+// Initialization sequence:
+// 1. Seed random number generator for job handlers
+// 2. Load application configuration
+// 3. Initialize database connection and run migrations
+// 4. Initialize Redis connection
+// 5. Setup job handler registry with supported job types
+// 6. Initialize job service and API handlers
+// 7. Start worker pool for job processing
+// 8. Start HTTP server with graceful shutdown support
+//
+// The application will terminate with a fatal error if any critical
+// component fails to initialize properly.
 func main() {
 	// Seed the random number generator once at application startup.
 	// This is important for the HandlePotentiallyFailingJob to have varied behavior.
@@ -41,6 +62,10 @@ func main() {
 			log.Printf("ERROR closing database connection: %v\n", cerr)
 		}
 	}()
+
+	if err := database.MigrateDB(dbPool); err != nil {
+		log.Fatalf("Database migration failed: %v", err)
+	}
 
 	// Connect to Redis
 	redisClient, err := redisclient.ConnectRedis(appCfg.Redis)

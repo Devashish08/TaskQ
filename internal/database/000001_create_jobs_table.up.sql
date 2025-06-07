@@ -1,4 +1,5 @@
-CREATE TABLE jobs (
+-- Use IF NOT EXISTS to prevent errors on subsequent runs
+CREATE TABLE IF NOT EXISTS jobs (
     id UUID PRIMARY KEY,
     type VARCHAR(255) NOT NULL,
     payload JSONB,
