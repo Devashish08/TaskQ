@@ -1,68 +1,55 @@
-body {
-    font-family: sans-serif;
-    margin: 20px;
-    background-color: #f4f4f4;
-    color: #333;
+/* Custom styles to complement Pico.css */
+
+/* Make the main container a bit wider */
+main.container {
+    max-width: 1280px;
 }
 
-.container {
-    background-color: #fff;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-}
-
-h1, h2 {
-    color: #333;
-}
-
-label {
-    display: block;
-    margin-top: 10px;
-    margin-bottom: 5px;
-}
-
-input[type="text"],
-select,
-textarea {
-    width: calc(100% - 22px);
-    padding: 10px;
-    margin-bottom: 10px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    box-sizing: border-box;
-}
-
-textarea {
-    resize: vertical;
-}
-
-button {
-    background-color: #007bff;
+/* Status badge styling */
+.status {
+    padding: 0.25em 0.6em;
+    font-size: 0.75em;
+    font-weight: bold;
+    border-radius: 999px; /* Pill shape */
     color: white;
-    padding: 10px 15px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 16px;
+    display: inline-block;
+    text-transform: uppercase;
 }
 
-button:hover {
-    background-color: #0056b3;
+.status-completed { background-color: #43a047; /* Green */ }
+.status-pending { background-color: #fb8c00; /* Orange */ }
+.status-running { background-color: #1e88e5; /* Blue */ }
+.status-failed { background-color: #e53935; /* Red */ }
+
+/* Styling for each job card in the recent list */
+.job-card {
+    border: 1px solid var(--card-border-color, #ddd);
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-radius: var(--border-radius);
+    background-color: var(--card-background-color, #f9f9f9);
 }
 
-pre {
-    background-color: #eee;
-    padding: 15px;
-    border-radius: 4px;
-    white-space: pre-wrap; /* Allows long lines to wrap */
-    word-wrap: break-word;
+.job-card h5 {
+    margin-top: 0;
+    font-size: 0.9rem;
+    color: var(--muted-color, #777);
     font-family: monospace;
-    border: 1px solid #ccc;
 }
 
-hr {
-    margin: 30px 0;
-    border: 0;
-    border-top: 1px solid #eee;
+.job-card p {
+    margin: 0.5rem 0;
+}
+
+/* Simple loading spinner */
+#recentJobsList[aria-busy="true"]::before {
+    content: '...';
+    display: inline-block;
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
 }
