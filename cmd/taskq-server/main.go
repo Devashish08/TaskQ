@@ -14,6 +14,7 @@ import (
 	"time" // For jobhandlers
 
 	"github.com/Devashish08/taskq/internal/api"
+	"github.com/Devashish08/taskq/internal/bot"
 	"github.com/Devashish08/taskq/internal/config"
 	"github.com/Devashish08/taskq/internal/database"
 	"github.com/Devashish08/taskq/internal/jobhandlers" // Import jobhandlers
@@ -91,6 +92,11 @@ func main() {
 	// Initialize Job Service with DB and Redis clients
 	jobService := service.NewJobService(dbPool, redisClient)
 
+	chronosBot, err := bot.NewBot(appCfg.Bot.Token, jobService)
+	if err != nil {
+		log.Fatalf("Failed to create chronos bot: %v", err)
+	}
+
 	// Initialize API Handler with Job Service
 	apiHandler := api.NewApiHandler(jobService)
 
@@ -108,6 +114,11 @@ func main() {
 		appCfg.Worker.MaxRetryAttempts,
 	)
 	pool.Start() // Starts worker goroutines
+
+	err = chronosBot.Start()
+	if err != nil {
+		log.Fatalf("Failed to start chronos bot: %v", err)
+	}
 
 	// --- HTTP Server Start and Graceful Shutdown Handling ---
 	// Channel to listen for OS shutdown signals
@@ -128,6 +139,7 @@ func main() {
 	log.Printf("Received signal: %s. Initiating graceful shutdown...", sig)
 
 	// Stop the worker pool. This will signal workers and wait for them to finish.
+	chronosBot.Stop()
 	pool.Stop()
 
 	log.Println("TaskQ server shutdown sequence complete. Deferred cleanups (DB, Redis close) will now run.")

@@ -1,73 +1,13 @@
-<!DOCTYPE html>
-<html lang="en" data-theme="light"> <!-- data-theme can be 'light' or 'dark' -->
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TaskQ - A Golang Job Queue System</title>
-    <!-- Pico.css for instant, beautiful styling -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
-    <!-- Your custom styles can override Pico if needed -->
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
-    <main class="container">
-        <header>
-            <hgroup>
-                <h1>TaskQ Demo</h1>
-                <h2>A Golang Job Queue System with PostgreSQL & Redis</h2>
-            </hgroup>
-            <p>
-                This is a live demonstration of a backend job queue system. The backend is built with Go and uses PostgreSQL for persistent job storage and Redis as a fast, in-memory message broker.
-                This system allows applications to offload long-running or deferrable tasks to be processed asynchronously by background workers.
-            </p>
-            <hr>
-        </header>
-
-        <div class="grid">
-            <!-- Left Column: Job Submission -->
-            <article>
-                <hgroup>
-                    <h3>Submit a New Job</h3>
-                    <p>Select a job type and provide a JSON payload to enqueue a new task for the workers.</p>
-                </hgroup>
-                <form id="submitJobForm">
-                    <label for="jobType">Job Type:</label>
-                    <select id="jobType" name="jobType" required>
-                        <option value="log_payload" selected>Log Payload (Success)</option>
-                        <option value="failing_job">Failing Job (Demonstrates Retries)</option>
-                        <option value="long_job">Long Running Job (3 seconds)</option>
-                    </select>
-
-                    <label for="jobPayload">Payload (JSON):</label>
-                    <textarea id="jobPayload" name="jobPayload" rows="5"></textarea>
-
-                    <button type="submit" id="submitBtn">Submit Job</button>
-                </form>
-
-                <h4>Submission Response:</h4>
-                <pre id="submissionApiResponse">Submit a job to see the API response.</pre>
-            </article>
-
-            <!-- Right Column: Recent Activity -->
-            <article>
-                <hgroup>
-                    <h3>Recent Activity</h3>
-                    <p>This list automatically refreshes every 5 seconds.</p>
-                </hgroup>
-                <div id="recentJobsList">
-                    <p>Loading recent jobs...</p>
-                </div>
-            </article>
-        </div>
-
-        <footer>
-            <hr>
-            <p>
-                <a href="https://github.com/Devashish08/TaskQ" target="_blank">View on GitHub</a>
-            </p>
-        </footer>
-    </main>
-
-    <script src="script.js"></script>
-</body>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TaskQ - Job Queue System</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
 </html>

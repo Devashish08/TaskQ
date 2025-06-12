@@ -2,14 +2,20 @@ package config
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strconv"
+
+	"github.com/joho/godotenv"
 )
 
 const (
 	DefaultMaxJobAttempts = 3
 )
 
+type BotConfig struct {
+	Token string
+}
 type DBConfig struct {
 	Host     string
 	Port     int
@@ -32,9 +38,13 @@ type AppConfig struct {
 	Database *DBConfig
 	Redis    *RedisConfig
 	Worker   *WorkerConfig
+	Bot      *BotConfig
 }
 
 func LoadConfig() (*AppConfig, error) {
+	if err := godotenv.Load(); err != nil {
+		log.Println("Warning: .env file not found, loading config from environment variables")
+	}
 	dbcfg, err := LoadDBConfig()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load database config: %w", err)
@@ -49,10 +59,16 @@ func LoadConfig() (*AppConfig, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to load worker config: %w", err)
 	}
+
+	botCfg, err := loadBotConfig()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load bot config: %w", err)
+	}
 	return &AppConfig{
 		Database: dbcfg,
 		Redis:    rediscfg,
 		Worker:   workerCfg,
+		Bot:      botCfg,
 	}, nil
 }
 
@@ -103,4 +119,14 @@ func getEnv(key, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+func loadBotConfig() (*BotConfig, error) {
+	token := os.Getenv("DISCORD_BOT_TOKEN")
+
+	if token == "" {
+		log.Println("Warning: Discord bot token not found in environment variables")
+	}
+
+	return &BotConfig{Token: token}, nil
 }
