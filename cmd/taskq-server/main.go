@@ -84,6 +84,7 @@ func main() {
 	jobHandlerRegistry := jobhandlers.NewRegistry()
 	// Register the handlers onto the specific registry instance.
 	// Use consistent job type strings that you'll use in API requests.
+	jobHandlerRegistry.Register("send_discord_reminder", jobhandlers.HandleDiscordReminder)
 	jobHandlerRegistry.Register("log_payload", jobhandlers.HandleSimpleLogJob)
 	jobHandlerRegistry.Register("failing_job", jobhandlers.HandlePotentiallyFailingJob)
 	jobHandlerRegistry.Register("long_job", jobhandlers.HandleLongRunningJob)
@@ -97,6 +98,7 @@ func main() {
 		log.Fatalf("Failed to create chronos bot: %v", err)
 	}
 
+	bot.BotInstance = chronosBot
 	// Initialize API Handler with Job Service
 	apiHandler := api.NewApiHandler(jobService)
 
@@ -112,6 +114,7 @@ func main() {
 		dbPool,
 		jobHandlerRegistry, // Pass the registry instance
 		appCfg.Worker.MaxRetryAttempts,
+		chronosBot.Session,
 	)
 	pool.Start() // Starts worker goroutines
 

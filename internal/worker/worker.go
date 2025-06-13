@@ -16,6 +16,7 @@ import (
 	"github.com/Devashish08/taskq/internal/jobhandlers"
 	"github.com/Devashish08/taskq/internal/models"
 	"github.com/Devashish08/taskq/internal/service"
+	"github.com/bwmarrin/discordgo"
 
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
@@ -25,11 +26,12 @@ import (
 // and processes them using registered handlers. Each worker maintains its own
 // database connection and operates independently within the worker pool.
 type Worker struct {
-	ID               int                      // Unique identifier for this worker instance
-	RedisClient      *redis.Client           // Redis client for job queue operations
-	DB               *sql.DB                 // Database connection for job persistence
-	JobRegistry      *jobhandlers.Registry   // Registry of available job handlers
-	MaxRetryAttempts int                     // Maximum number of retry attempts per job
+	ID               int                   // Unique identifier for this worker instance
+	RedisClient      *redis.Client         // Redis client for job queue operations
+	DB               *sql.DB               // Database connection for job persistence
+	JobRegistry      *jobhandlers.Registry // Registry of available job handlers
+	MaxRetryAttempts int                   // Maximum number of retry attempts per job
+	DiscordSession   *discordgo.Session    // Discord session for bot operations
 }
 
 // NewWorker creates a new worker instance with the specified configuration.
@@ -41,36 +43,15 @@ type Worker struct {
 //   - db: Database connection for job state persistence
 //   - registry: Job handler registry containing all available job processors
 //   - maxRetries: Maximum retry attempts before marking a job as failed
-func NewWorker(id int, redisClient *redis.Client, db *sql.DB, registry *jobhandlers.Registry, maxRetries int) *Worker {
+func NewWorker(id int, redisClient *redis.Client, db *sql.DB, registry *jobhandlers.Registry, maxRetries int, dg *discordgo.Session) *Worker {
 	return &Worker{
 		ID:               id,
 		RedisClient:      redisClient,
 		DB:               db,
 		JobRegistry:      registry,
 		MaxRetryAttempts: maxRetries,
+		DiscordSession:   dg,
 	}
-}
-
-// safeInvoke executes a job handler with panic recovery to prevent worker crashes.
-// If a panic occurs during job execution, it's recovered and converted to an error.
-// This ensures system stability even when job handlers contain bugs.
-//
-// Parameters:
-//   - h: The job handler function to execute
-//   - payload: JSON payload to pass to the handler
-//
-// Returns:
-//   - error: Any error from the handler execution or recovered panic
-func safeInvoke(h jobhandlers.JobHandlerFunc, payload json.RawMessage) (err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			stack := make([]byte, 1024*8)
-			stack = stack[:runtime.Stack(stack, false)]
-			log.Printf("Worker: PANIC recovered in job handler. Panic: %v\nStack: %s\n", r, string(stack))
-			err = fmt.Errorf("panic in job handler: %v", r)
-		}
-	}()
-	return h(payload)
 }
 
 // processJob handles the execution of a single job by looking up the appropriate
@@ -84,7 +65,7 @@ func safeInvoke(h jobhandlers.JobHandlerFunc, payload json.RawMessage) (err erro
 //   - error: Any error that occurred during job processing
 func (w *Worker) processJob(job *models.Job) error {
 	log.Printf("Worker %d: Looking up handler for job %s (Type: %s)\n", w.ID, job.ID, job.Type)
-	
+
 	handler, err := w.JobRegistry.Get(job.Type)
 	if err != nil {
 		log.Printf("Worker %d: No handler for job type '%s': %v\n", w.ID, job.Type, err)
@@ -92,7 +73,7 @@ func (w *Worker) processJob(job *models.Job) error {
 	}
 
 	log.Printf("Worker %d: Executing handler for job %s (Type: %s)\n", w.ID, job.ID, job.Type)
-	processingErr := safeInvoke(handler, job.Payload)
+	processingErr := safeInvoke(handler, w.DiscordSession, job.Payload)
 
 	if processingErr != nil {
 		log.Printf("Worker %d: Handler for job %s (Type: %s) failed: %v\n", w.ID, job.ID, job.Type, processingErr)
@@ -101,6 +82,28 @@ func (w *Worker) processJob(job *models.Job) error {
 
 	log.Printf("Worker %d: Handler for job %s (Type: %s) completed successfully\n", w.ID, job.ID, job.Type)
 	return nil
+}
+
+// safeInvoke executes a job handler with panic recovery to prevent worker crashes.
+// If a panic occurs during job execution, it's recovered and converted to an error.
+// This ensures system stability even when job handlers contain bugs.
+//
+// Parameters:
+//   - h: The job handler function to execute
+//   - payload: JSON payload to pass to the handler
+//
+// Returns:
+//   - error: Any error from the handler execution or recovered panic
+func safeInvoke(h jobhandlers.JobHandlerFunc, s *discordgo.Session, payload json.RawMessage) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			stack := make([]byte, 1024*8)
+			stack = stack[:runtime.Stack(stack, false)]
+			log.Printf("Worker: PANIC recovered in job handler. Panic: %v\nStack: %s\n", r, string(stack))
+			err = fmt.Errorf("panic in job handler: %v", r)
+		}
+	}()
+	return h(s, payload)
 }
 
 // Start begins the worker's main processing loop. The worker continuously polls
@@ -137,12 +140,12 @@ func (w *Worker) Start(ctx context.Context, wg *sync.WaitGroup) {
 				time.Sleep(1 * time.Second)
 				continue
 			}
-			
+
 			if len(result) != 2 {
 				log.Printf("Worker %d: ERROR - Unexpected BRPOP result: %v", w.ID, result)
 				continue
 			}
-			
+
 			jobIDStr := result[1]
 			jobID, err := uuid.Parse(jobIDStr)
 			if err != nil {
@@ -162,7 +165,7 @@ func (w *Worker) Start(ctx context.Context, wg *sync.WaitGroup) {
 			selectSQL := `SELECT id, type, payload, status, created_at, updated_at, attempts FROM jobs WHERE id = $1 FOR UPDATE`
 			row := tx.QueryRowContext(ctx, selectSQL, jobID)
 			err = row.Scan(&job.ID, &job.Type, &job.Payload, &job.Status, &job.CreatedAt, &job.UpdatedAt, &job.Attempts)
-			
+
 			if err != nil {
 				if err == sql.ErrNoRows {
 					log.Printf("Worker %d: WARNING - Job %s not found in DB.", w.ID, jobID)
@@ -174,7 +177,7 @@ func (w *Worker) Start(ctx context.Context, wg *sync.WaitGroup) {
 			}
 
 			log.Printf("Worker %d: Fetched job %s (Attempts: %d, Status: %s)\n", w.ID, job.ID, job.Attempts, job.Status)
-			
+
 			if job.Status != models.StatusPending {
 				log.Printf("Worker %d: Job %s has status '%s', not pending. Skipping.", w.ID, job.ID, job.Status)
 				_ = tx.Rollback()
@@ -232,7 +235,7 @@ func (w *Worker) Start(ctx context.Context, wg *sync.WaitGroup) {
 				log.Printf("Worker %d: CRITICAL ERROR - Failed to update job %s in DB to status '%s', attempts %d: %v", w.ID, job.ID, finalDbStatusToSet, dbUpdateAttempts, dbUpdateErr)
 			} else {
 				log.Printf("Worker %d: Successfully updated job %s in DB to status '%s', attempts %d.", w.ID, job.ID, finalDbStatusToSet, dbUpdateAttempts)
-				
+
 				// Requeue for retry if needed
 				if shouldRequeueToRedis {
 					errRequeue := w.RedisClient.LPush(ctx, service.PendingQueueKey, job.ID.String()).Err()
@@ -251,14 +254,15 @@ func (w *Worker) Start(ctx context.Context, wg *sync.WaitGroup) {
 // It provides coordinated startup and shutdown of all workers, ensuring
 // graceful handling of in-flight jobs during shutdown.
 type WorkerPool struct {
-	NumWorkers       int                      // Number of worker instances to create
-	RedisClient      *redis.Client           // Shared Redis client for all workers
-	DB               *sql.DB                 // Shared database connection pool
-	JobRegistry      *jobhandlers.Registry   // Shared job handler registry
-	MaxRetryAttempts int                     // Maximum retry attempts for failed jobs
-	wg               sync.WaitGroup          // WaitGroup for coordinated shutdown
-	cancelCtx        context.Context         // Context for canceling all workers
-	cancelFunc       context.CancelFunc      // Function to trigger shutdown
+	NumWorkers       int                   // Number of worker instances to create
+	RedisClient      *redis.Client         // Shared Redis client for all workers
+	DB               *sql.DB               // Shared database connection pool
+	JobRegistry      *jobhandlers.Registry // Shared job handler registry
+	MaxRetryAttempts int                   // Maximum retry attempts for failed jobs
+	wg               sync.WaitGroup        // WaitGroup for coordinated shutdown
+	cancelCtx        context.Context       // Context for canceling all workers
+	cancelFunc       context.CancelFunc    // Function to trigger shutdown
+	DiscordSession   *discordgo.Session    // Discord session for bot operations
 }
 
 // NewWorkerPool creates a new worker pool with the specified configuration.
@@ -274,7 +278,7 @@ type WorkerPool struct {
 //
 // Returns:
 //   - *WorkerPool: Configured worker pool ready to start
-func NewWorkerPool(numWorkers int, redisClient *redis.Client, db *sql.DB, registry *jobhandlers.Registry, maxRetries int) *WorkerPool {
+func NewWorkerPool(numWorkers int, redisClient *redis.Client, db *sql.DB, registry *jobhandlers.Registry, maxRetries int, dg *discordgo.Session) *WorkerPool {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &WorkerPool{
 		NumWorkers:       numWorkers,
@@ -285,6 +289,7 @@ func NewWorkerPool(numWorkers int, redisClient *redis.Client, db *sql.DB, regist
 		cancelCtx:        ctx,
 		cancelFunc:       cancel,
 		wg:               sync.WaitGroup{},
+		DiscordSession:   dg,
 	}
 }
 
@@ -296,13 +301,13 @@ func NewWorkerPool(numWorkers int, redisClient *redis.Client, db *sql.DB, regist
 // if workers are already running.
 func (p *WorkerPool) Start() {
 	log.Printf("Starting worker pool with %d workers (max retries per job: %d)\n", p.NumWorkers, p.MaxRetryAttempts)
-	
+
 	for i := 1; i <= p.NumWorkers; i++ {
-		worker := NewWorker(i, p.RedisClient, p.DB, p.JobRegistry, p.MaxRetryAttempts)
+		worker := NewWorker(i, p.RedisClient, p.DB, p.JobRegistry, p.MaxRetryAttempts, p.DiscordSession)
 		p.wg.Add(1)
 		go worker.Start(p.cancelCtx, &p.wg)
 	}
-	
+
 	log.Println("Worker pool started successfully.")
 }
 

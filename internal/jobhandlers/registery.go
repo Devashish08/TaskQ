@@ -4,11 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+
+	"github.com/bwmarrin/discordgo"
 )
 
 // JobHandlerFunc defines the signature for all job handler functions.
 // It takes the raw JSON payload and returns an error if processing fails.
-type JobHandlerFunc func(payload json.RawMessage) error
+type JobHandlerFunc func(s *discordgo.Session, payload json.RawMessage) error
 
 // Registry stores the mapping from job type strings to handler functions.
 type Registry struct {

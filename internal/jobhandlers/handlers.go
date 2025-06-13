@@ -7,7 +7,15 @@ import (
 	"log"
 	"math/rand"
 	"time"
+
+	"github.com/bwmarrin/discordgo"
 )
+
+type ReminderPayload struct {
+	ChannelID string `json:"channel_id"`
+	UserID    string `json:"user_id"`
+	Message   string `json:"message"`
+}
 
 // ConditionalPayload is an example payload struct for HandlePotentiallyFailingJob.
 type ConditionalPayload struct {
@@ -16,7 +24,7 @@ type ConditionalPayload struct {
 }
 
 // HandleSimpleLogJob logs the received payload and simulates quick processing.
-func HandleSimpleLogJob(payload json.RawMessage) error {
+func HandleSimpleLogJob(s *discordgo.Session, payload json.RawMessage) error {
 	log.Printf("[JobHandler - HandleSimpleLogJob] Received payload: %s", string(payload))
 	time.Sleep(10 * time.Millisecond)
 	log.Printf("[JobHandler - HandleSimpleLogJob] Finished processing.")
@@ -26,7 +34,7 @@ func HandleSimpleLogJob(payload json.RawMessage) error {
 // HandlePotentiallyFailingJob can fail based on its payload or randomly.
 // In internal/jobhandlers/handlers.go
 
-func HandlePotentiallyFailingJob(payload json.RawMessage) error {
+func HandlePotentiallyFailingJob(s *discordgo.Session, payload json.RawMessage) error {
 	log.Printf("[JobHandler - HandlePotentiallyFailingJob] RAW PAYLOAD RECEIVED: %s\n", string(payload)) // Log the exact raw string
 
 	var p ConditionalPayload
@@ -59,9 +67,29 @@ func HandlePotentiallyFailingJob(payload json.RawMessage) error {
 }
 
 // HandleLongRunningJob simulates a job that takes more time to complete.
-func HandleLongRunningJob(payload json.RawMessage) error {
+func HandleLongRunningJob(s *discordgo.Session, payload json.RawMessage) error {
 	log.Printf("[JobHandler - HandleLongRunningJob] Starting long task with payload: %s", string(payload))
 	time.Sleep(3 * time.Second)
 	log.Printf("[JobHandler - HandleLongRunningJob] Finished long task.")
+	return nil
+}
+
+func HandleDiscordReminder(s *discordgo.Session, payload json.RawMessage) error {
+	var p ReminderPayload
+	if err := json.Unmarshal(payload, &p); err != nil {
+		return fmt.Errorf("failed to unmarshal reminder payload: %w", err)
+	}
+
+	log.Printf("Sending reminder to channel %s for user %s", p.ChannelID, p.UserID)
+
+	reminderText := fmt.Sprintf("Hey <@%s>, here is your reminder: %s", p.UserID, p.Message)
+
+	_, err := s.ChannelMessageSend(p.ChannelID, reminderText)
+	if err != nil {
+		log.Printf("ERROR sending reminder message: %v", err)
+		return err
+	}
+
+	log.Printf("Successfully sent reminder for user %s", p.UserID)
 	return nil
 }
