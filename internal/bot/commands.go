@@ -57,7 +57,7 @@ var commandHandlers = map[string]func(s *discordgo.Session, i *discordgo.Interac
 			"message":    message,
 		}
 
-		job, err := BotInstance.JobSvc.SubmitJob("send_discord_reminder", payload)
+		job, err := BotInstance.JobSvc.SubmitJob("send_discord_reminder", payload, nil)
 		if err != nil {
 			log.Printf("Bot: Failed to submit reminder job: %v", err)
 			errorMsg := "Sorry, there was an error scheduling your reminder. Please try again later."

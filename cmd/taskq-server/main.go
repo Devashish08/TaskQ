@@ -6,18 +6,18 @@ package main
 
 import (
 	"log"
-	"math/rand" // For jobhandlers
+	"math/rand"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
-	"time" // For jobhandlers
+	"time"
 
 	"github.com/Devashish08/taskq/internal/api"
 	"github.com/Devashish08/taskq/internal/bot"
 	"github.com/Devashish08/taskq/internal/config"
 	"github.com/Devashish08/taskq/internal/database"
-	"github.com/Devashish08/taskq/internal/jobhandlers" // Import jobhandlers
+	"github.com/Devashish08/taskq/internal/jobhandlers"
 	redisclient "github.com/Devashish08/taskq/internal/redisClient"
 	"github.com/Devashish08/taskq/internal/service"
 	"github.com/Devashish08/taskq/internal/worker"
@@ -41,10 +41,8 @@ import (
 // The application will terminate with a fatal error if any critical
 // component fails to initialize properly.
 func main() {
-	// Seed the random number generator once at application startup.
-	// This is important for the HandlePotentiallyFailingJob to have varied behavior.
+	// Seed the random number generator for job handlers
 	rand.Seed(time.Now().UnixNano())
-	log.Println("Starting TaskQ server...") // Moved log to after seeding
 
 	// Load application configuration
 	appCfg, err := config.LoadConfig()
@@ -57,40 +55,35 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
-	defer func() {
-		log.Println("Closing database connection pool...")
-		if cerr := dbPool.Close(); cerr != nil {
-			log.Printf("ERROR closing database connection: %v\n", cerr)
-		}
-	}()
+	defer dbPool.Close()
+
+	database.CheckConnectionInfo(dbPool, "After ConnectDB in main")
 
 	if err := database.MigrateDB(dbPool); err != nil {
 		log.Fatalf("Database migration failed: %v", err)
 	}
+
+	err = database.VerifyTables(dbPool)
+	if err != nil {
+		log.Fatalf("FATAL: Table verification failed after migration: %v", err)
+	}
+	log.Println("Table verification successful after migration.")
 
 	// Connect to Redis
 	redisClient, err := redisclient.ConnectRedis(appCfg.Redis)
 	if err != nil {
 		log.Fatalf("Failed to connect to Redis: %v", err)
 	}
-	defer func() {
-		log.Println("Closing Redis connection...")
-		if cerr := redisClient.Close(); cerr != nil {
-			log.Printf("ERROR closing Redis connection: %v\n", cerr)
-		}
-	}()
+	defer redisClient.Close()
 
-	// --- Create and Populate Job Handler Registry ---
+	// Create and populate job handler registry
 	jobHandlerRegistry := jobhandlers.NewRegistry()
-	// Register the handlers onto the specific registry instance.
-	// Use consistent job type strings that you'll use in API requests.
 	jobHandlerRegistry.Register("send_discord_reminder", jobhandlers.HandleDiscordReminder)
 	jobHandlerRegistry.Register("log_payload", jobhandlers.HandleSimpleLogJob)
 	jobHandlerRegistry.Register("failing_job", jobhandlers.HandlePotentiallyFailingJob)
 	jobHandlerRegistry.Register("long_job", jobhandlers.HandleLongRunningJob)
-	// --- End Registry Setup ---
 
-	// Initialize Job Service with DB and Redis clients
+	// Initialize services
 	jobService := service.NewJobService(dbPool, redisClient)
 
 	chronosBot, err := bot.NewBot(appCfg.Bot.Token, jobService)
@@ -99,51 +92,46 @@ func main() {
 	}
 
 	bot.BotInstance = chronosBot
-	// Initialize API Handler with Job Service
 	apiHandler := api.NewApiHandler(jobService)
-
-	// Setup API Router
 	router := api.SetupRouterWithDeps(apiHandler)
 
-	// Initialize and Start Worker Pool
-	// Pass all dependencies including the populated jobHandlerRegistry.
+	// Initialize worker pool and outbox poller
 	numWorkers := 3 // TODO: Make this configurable from appCfg.Worker
 	pool := worker.NewWorkerPool(
 		numWorkers,
 		redisClient,
 		dbPool,
-		jobHandlerRegistry, // Pass the registry instance
+		jobHandlerRegistry,
 		appCfg.Worker.MaxRetryAttempts,
 		chronosBot.Session,
 	)
-	pool.Start() // Starts worker goroutines
+	pool.Start()
 
-	err = chronosBot.Start()
-	if err != nil {
+	outboxPoller := worker.NewOutboxPoller(dbPool, redisClient, 2*time.Second)
+	outboxPoller.Start()
+
+	if err = chronosBot.Start(); err != nil {
 		log.Fatalf("Failed to start chronos bot: %v", err)
 	}
 
-	// --- HTTP Server Start and Graceful Shutdown Handling ---
-	// Channel to listen for OS shutdown signals
+	// Start HTTP server with graceful shutdown
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
-	// Start HTTP server in a separate goroutine
 	go func() {
 		port := "8080" // TODO: Make this configurable
-		log.Printf("API Server Listening on port %s", port)
+		log.Printf("API Server listening on port %s", port)
 		if err := router.Run(":" + port); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Failed to start API server: %v", err)
 		}
 	}()
 
-	// Block main goroutine until a shutdown signal is received
+	// Wait for shutdown signal
 	sig := <-quit
-	log.Printf("Received signal: %s. Initiating graceful shutdown...", sig)
+	log.Printf("Shutting down server (signal: %s)", sig)
 
-	// Stop the worker pool. This will signal workers and wait for them to finish.
+	// Graceful shutdown
+	outboxPoller.Stop()
 	chronosBot.Stop()
 	pool.Stop()
-
-	log.Println("TaskQ server shutdown sequence complete. Deferred cleanups (DB, Redis close) will now run.")
 }
